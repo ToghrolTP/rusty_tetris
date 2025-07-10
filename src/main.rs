@@ -100,9 +100,59 @@ impl GameState {
     }
 
     fn update(&mut self) {
-        if let Some(piece) = &mut self.active_piece {
-            piece.y += 1;
+        if let Some(mut piece) = self.active_piece {
+            // Create a potential next position
+            let mut next_pos = piece;
+            next_pos.y += 1;
+
+            if self.is_valid_position(&next_pos) {
+                self.active_piece = Some(next_pos);
+            } else {
+                self.lock_piece(piece);
+            }
         }
+    }
+
+    fn lock_piece(&mut self, piece: Tetromino) {
+        let shape = SHAPES[piece.kind as usize][piece.rotation];
+        for y in 0..4 {
+            for x in 0..4 {
+                if shape[y][x] == 1 {
+                    let board_x = piece.x as usize + x;
+                    let board_y = piece.y as usize + y;
+                    if board_y < BOARD_HEIGHT && board_x < BOARD_WIDTH {
+                        self.board[board_y][board_x] = Cell::Occupied;
+                    }
+                }
+            }
+        }
+
+        self.active_piece = None;
+    }
+
+    fn is_valid_position(&self, piece: &Tetromino) -> bool {
+        let shape = SHAPES[piece.kind as usize][piece.rotation];
+
+        for y in 0..4 {
+            for x in 0..4 {
+                if shape[x][y] == 1 {
+                    let board_x = piece.x + x as isize;
+                    let board_y = piece.y + y as isize;
+
+                    if board_x < 0
+                        || board_x >= BOARD_WIDTH as isize
+                        || board_y >= BOARD_HEIGHT as isize
+                    {
+                        return false;
+                    }
+
+                    if self.board[board_y as usize][board_x as usize] == Cell::Occupied {
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 }
 
