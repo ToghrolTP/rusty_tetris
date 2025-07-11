@@ -87,20 +87,17 @@ struct GameState {
 
 impl GameState {
     fn new() -> Self {
-        GameState {
+        let mut game = GameState {
             board: [[Cell::Empty; BOARD_WIDTH]; BOARD_HEIGHT],
-            // Spawn a T-piece
-            active_piece: Some(Tetromino {
-                kind: TetrominoKind::O,
-                rotation: 0,
-                x: 3,
-                y: 0,
-            }),
-        }
+            active_piece: None,
+        };
+
+        game.spawn_piece();
+        game
     }
 
     fn update(&mut self) {
-        if let Some(mut piece) = self.active_piece {
+        if let Some(piece) = self.active_piece {
             // Create a potential next position
             let mut next_pos = piece;
             next_pos.y += 1;
@@ -109,6 +106,7 @@ impl GameState {
                 self.active_piece = Some(next_pos);
             } else {
                 self.lock_piece(piece);
+                self.spawn_piece();
             }
         }
     }
@@ -135,7 +133,7 @@ impl GameState {
 
         for y in 0..4 {
             for x in 0..4 {
-                if shape[x][y] == 1 {
+                if shape[y][x] == 1 {
                     let board_x = piece.x + x as isize;
                     let board_y = piece.y + y as isize;
 
@@ -153,6 +151,15 @@ impl GameState {
             }
         }
         true
+    }
+
+    fn spawn_piece(&mut self) {
+        self.active_piece = Some(Tetromino {
+            kind: TetrominoKind::L,
+            rotation: 0,
+            x: 3,
+            y: 0,
+        })
     }
 }
 
@@ -195,6 +202,6 @@ fn main() {
         render(&game_state);
         game_state.update();
 
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(200));
     }
 }
