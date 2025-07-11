@@ -1,3 +1,6 @@
+use crossterm::{
+    event::{poll, read, Event, KeyCode}, style::PrintStyledContent, terminal
+};
 use std::{thread, time::Duration};
 
 const BOARD_WIDTH: usize = 10;
@@ -161,6 +164,38 @@ impl GameState {
             y: 0,
         })
     }
+    
+    fn handle_input(&mut self) {
+        if poll(Duration::from_millis(0)).unwrap() {
+            if let Ok(Event::Key(key_event)) = read() {
+                if let Some(mut piece) = self.active_piece {
+                    let mut next_pos = piece;
+                    match key_event.code {
+                        KeyCode::Left => next_pos.x -= 1,
+                        KeyCode::Right => next_pos.x += 1,
+                        KeyCode::Down => next_pos.y += 1,
+                        KeyCode::Up => next_pos.rotation = (next_pos.rotation + 1) % 4,
+                        _ => {}
+                    }
+                    
+                    if self.is_valid_position(&next_pos) {
+                        self.active_piece = Some(next_pos);
+                    }
+                }
+            }
+        }
+    }
+    
+    fn rotate_piece(&mut self) {
+        if let Some(mut piece) = self.active_piece {
+            let mut next_pos = piece;
+            next_pos.rotation = (next_pos.rotation + 1) % 4;
+            
+            if self.is_valid_position(&next_pos) {
+                self.active_piece = Some(next_pos);
+            }
+        }
+    }
 }
 
 fn render(game_state: &GameState) {
@@ -191,14 +226,34 @@ fn render(game_state: &GameState) {
                 Cell::Occupied => print!("# "),
             }
         }
-        println!();
+        println!("\r");
+    }
+}
+
+struct RawModeGuard;
+
+impl RawModeGuard {
+    fn new() -> Self {
+        terminal::enable_raw_mode().expect("Failed to enable raw mode");
+        RawModeGuard
+    }
+}
+
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        terminal::disable_raw_mode().expect("Failed to disable raw mode");
+        println!("\nRaw mode disabled. Goodbye!");
     }
 }
 
 fn main() {
+    let _raw_mode_guard = RawModeGuard::new();
+    
     let mut game_state = GameState::new();
 
     loop {
+        game_state.handle_input();
+        
         render(&game_state);
         game_state.update();
 
